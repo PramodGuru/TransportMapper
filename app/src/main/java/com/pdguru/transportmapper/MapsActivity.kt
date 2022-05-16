@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -19,10 +20,10 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.pdguru.transportmapper.databinding.ActivityMapsBinding
+import com.pdguru.transportmapper.model.Vehicle
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
@@ -73,13 +74,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         gMap = googleMap
 
         // place marker for each available vehicle
-        viewModel.availableVehicles.observe(this) { vehicles ->
-                vehicles.forEach {
-                    val marker = LatLng(it!!.attributes.lat, it.attributes.lng)
-                    gMap.addMarker(
-                        MarkerOptions().position(marker).title(it.attributes.vehicleType)
-                    )
-                }
+        viewModel.state.observe(this) { state ->
+            state.availableVehicles.forEach {
+                val marker = LatLng(it!!.attributes.lat, it.attributes.lng)
+                gMap.addMarker(
+                    MarkerOptions().position(marker).title(it.attributes.vehicleType).snippet(it.id)
+                )
+            }
+            state.message?.let { toast(it) }
         }
 
         //get users location
@@ -96,15 +98,26 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             animateCamera(CameraUpdateFactory.zoomTo(16f))
             setOnMapClickListener { setBottomSheetVisibility(false) }
             setOnMarkerClickListener { marker ->
-                showVehicleInfo(marker)
+                showVehicleInfo(viewModel.getVehicleInfo(marker))
                 false
             }
         }
     }
 
-    private fun showVehicleInfo(marker: Marker) {
-        bottomSheetView.findViewById<TextView>(R.id.tv_vehicle_type).text = marker.title
-        setBottomSheetVisibility(true)
+    private fun showVehicleInfo(vehicle: Vehicle?) {
+        if (vehicle != null) {
+            bottomSheetView.findViewById<TextView>(R.id.tv_vehicle_type).text =
+                vehicle.attributes.vehicleType
+            bottomSheetView.findViewById<TextView>(R.id.tv_battery_level).text =
+                "${vehicle.attributes.batteryLevel}%"
+            bottomSheetView.findViewById<CheckBox>(R.id.cb_helmet).isChecked =
+                vehicle.attributes.hasHelmetBox
+            setBottomSheetVisibility(true)
+        } else {
+            setBottomSheetVisibility(false)
+            toast("Could not get vehicle information")
+        }
+
     }
 
     @SuppressLint("MissingPermission")
@@ -134,7 +147,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         ) == PackageManager.PERMISSION_GRANTED)
     }
 
-    private fun toast(message: String){
+    private fun toast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 }
