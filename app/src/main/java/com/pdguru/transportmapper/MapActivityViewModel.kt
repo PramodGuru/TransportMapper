@@ -10,6 +10,7 @@ import com.pdguru.transportmapper.networking.VehiclesInterface
 import kotlinx.coroutines.launch
 import retrofit2.Response
 import retrofit2.Retrofit
+import timber.log.Timber
 
 class MapActivityViewModel(retrofitClient: Retrofit) : ViewModel() {
     private val vehiclesInterface: VehiclesInterface =
@@ -18,13 +19,21 @@ class MapActivityViewModel(retrofitClient: Retrofit) : ViewModel() {
     private val _availableVehicles = MutableLiveData<List<Vehicle?>>()
     val availableVehicles = _availableVehicles as LiveData<List<Vehicle?>>
 
+    private val _message = MutableLiveData<String>()
+    val message = _message as LiveData<String>
+
     fun getAvailableVehicles() {
-        viewModelScope.launch {
-            handleResponse(vehiclesInterface.getAllAvailableVehicles())
+        try {
+            viewModelScope.launch {
+                handleResponse(vehiclesInterface.getAllAvailableVehicles())
+            }
+        }catch (exception: Exception){
+            Timber.e(exception)
         }
     }
 
     private fun handleResponse(response: Response<AvailableVehicles>) {
-        _availableVehicles.postValue(response.body()?.data?.toList())
+        if (response.isSuccessful) _availableVehicles.postValue(response.body()?.data?.toList())
+        else _message.postValue("Something went wrong")
     }
 }
