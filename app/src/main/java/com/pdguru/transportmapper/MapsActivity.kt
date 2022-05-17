@@ -25,6 +25,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.pdguru.transportmapper.databinding.ActivityMapsBinding
 import com.pdguru.transportmapper.model.Vehicle
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import timber.log.Timber
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -58,10 +59,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
-        ) {
-            getUserLocation()
+        ) { permit ->
+            if (permit) getUserLocation()
+            else useDefaultLocation()
         }
         viewModel.getAvailableVehicles()
+    }
+
+    private fun useDefaultLocation(): LatLng {
+        return LatLng(52.52519, 13.36935) // berlin Hbf
     }
 
     private fun setBottomSheetVisibility(isVisible: Boolean) {
@@ -85,23 +91,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         //get users location
-        val userLatLng = getUserLocation()
-
-        gMap.apply {
-            addMarker(
-                MarkerOptions()
-                    .position(userLatLng)
-                    .title("Current location")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
-            )
-            moveCamera(CameraUpdateFactory.newLatLng(userLatLng))
-            animateCamera(CameraUpdateFactory.zoomTo(16f))
-            setOnMapClickListener { setBottomSheetVisibility(false) }
-            setOnMarkerClickListener { marker ->
-                showVehicleInfo(viewModel.getVehicleInfo(marker))
-                false
-            }
-        }
+        getUserLocation()
     }
 
     private fun showVehicleInfo(vehicle: Vehicle?) {
@@ -121,23 +111,41 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     @SuppressLint("MissingPermission")
-    private fun getUserLocation(): LatLng {
-        var latLng = LatLng(52.52519, 13.36935) // default to Berlin Hbf
+    private fun getUserLocation() {
         if (hasLocationPermission()) {
             val location = fusedLocationProviderClient.lastLocation
             location.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val lastKnownLocation = task.result
-                    latLng = LatLng(lastKnownLocation.latitude, lastKnownLocation.longitude)
+                    Timber.d("currLoc: ${lastKnownLocation.latitude}, ${lastKnownLocation.longitude}")
+                    showUserLocation(LatLng(lastKnownLocation.latitude, lastKnownLocation.longitude))
                 } else {
                     toast("Could not determine your location")
+                    showUserLocation(useDefaultLocation()) // default Berlin Hbf
                 }
             }
         } else {
             toast("Location permission not granted.")
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-        return latLng
+    }
+
+    private fun showUserLocation(userLatLng: LatLng) {
+        gMap.apply {
+            addMarker(
+                MarkerOptions()
+                    .position(userLatLng)
+                    .title("Current location")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+            )
+            moveCamera(CameraUpdateFactory.newLatLng(userLatLng))
+            animateCamera(CameraUpdateFactory.zoomTo(16f))
+            setOnMapClickListener { setBottomSheetVisibility(false) }
+            setOnMarkerClickListener { marker ->
+                showVehicleInfo(viewModel.getVehicleInfo(marker))
+                false
+            }
+        }
     }
 
     private fun hasLocationPermission(): Boolean {
