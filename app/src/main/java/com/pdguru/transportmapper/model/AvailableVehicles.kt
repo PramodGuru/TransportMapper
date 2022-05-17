@@ -1,6 +1,8 @@
 package com.pdguru.transportmapper.model
 
 import android.os.Parcelable
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.clustering.ClusterItem
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize
@@ -23,4 +25,16 @@ data class Attributes(
 	val lat: Double,
 	val vehicleType: String,
 	val batteryLevel: Int
-) : Parcelable
+) : Parcelable, ClusterItem {
+	override fun getPosition(): LatLng {
+		return LatLng(lat, lng)
+	}
+
+	override fun getTitle(): String {
+		return vehicleType
+	}
+
+	override fun getSnippet(): String {
+		return ""
+	}
+}

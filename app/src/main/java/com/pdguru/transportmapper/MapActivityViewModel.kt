@@ -50,7 +50,7 @@ class MapActivityViewModel(retrofitClient: Retrofit) : ViewModel() {
 
     fun getVehicleInfo(marker: Marker): Vehicle? {
         return currentState.availableVehicles.find { vehicle ->
-            vehicle?.id == marker.snippet
+            vehicle?.attributes?.lat == marker.position.latitude && vehicle?.attributes?.lng == marker.position.longitude
         }
     }
 

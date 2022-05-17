@@ -22,7 +22,9 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.maps.android.clustering.ClusterManager
 import com.pdguru.transportmapper.databinding.ActivityMapsBinding
+import com.pdguru.transportmapper.model.Attributes
 import com.pdguru.transportmapper.model.Vehicle
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import timber.log.Timber
@@ -78,14 +80,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         gMap = googleMap
+        val clusterManager = ClusterManager<Attributes>(this, gMap)
+
+        googleMap.setOnCameraIdleListener(clusterManager)
 
         // place marker for each available vehicle
         viewModel.state.observe(this) { state ->
+
             state.availableVehicles.forEach {
-                val marker = LatLng(it!!.attributes.lat, it.attributes.lng)
-                gMap.addMarker(
-                    MarkerOptions().position(marker).title(it.attributes.vehicleType).snippet(it.id)
-                )
+                clusterManager.addItem(it?.attributes)
+                clusterManager.cluster()
             }
             state.message?.let { toast(it) }
         }
