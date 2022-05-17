@@ -8,6 +8,7 @@ import com.google.android.gms.maps.model.Marker
 import com.pdguru.transportmapper.model.AvailableVehicles
 import com.pdguru.transportmapper.model.Vehicle
 import com.pdguru.transportmapper.networking.VehiclesInterface
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -30,13 +31,15 @@ class MapActivityViewModel(retrofitClient: Retrofit) : ViewModel() {
     }
 
     fun getAvailableVehicles() {
-        try {
-            viewModelScope.launch {
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
                 handleResponse(vehiclesInterface.getAllAvailableVehicles())
+            } catch (exception: Exception) {
+                Timber.e(exception)
             }
-        } catch (exception: Exception) {
-            Timber.e(exception)
         }
+
     }
 
     private fun handleResponse(response: Response<AvailableVehicles>) {
@@ -45,12 +48,16 @@ class MapActivityViewModel(retrofitClient: Retrofit) : ViewModel() {
                 availableVehicles = response.body()?.data?.toList() ?: listOf()
             )
         )
-        else _state.postValue(currentState.copy(message = "Something went wrong"))
+        else {
+            _state.postValue(currentState.copy(message = "Something went wrong"))
+            Timber.e("${response.errorBody()}")
+        }
     }
 
     fun getVehicleInfo(marker: Marker): Vehicle? {
         return currentState.availableVehicles.find { vehicle ->
-            vehicle?.attributes?.lat == marker.position.latitude && vehicle?.attributes?.lng == marker.position.longitude
+            vehicle?.attributes?.lat == marker.position.latitude
+                    && vehicle?.attributes?.lng == marker.position.longitude
         }
     }
 

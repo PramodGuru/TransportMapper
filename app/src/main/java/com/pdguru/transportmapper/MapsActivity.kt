@@ -52,8 +52,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.map) as SupportMapFragment
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetView)
@@ -81,20 +80,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         gMap = googleMap
         val clusterManager = ClusterManager<Attributes>(this, gMap)
-
         googleMap.setOnCameraIdleListener(clusterManager)
 
-        // place marker for each available vehicle
         viewModel.state.observe(this) { state ->
-
-            state.availableVehicles.forEach {
-                clusterManager.addItem(it?.attributes)
-                clusterManager.cluster()
+            if (state.availableVehicles.isNotEmpty()) {
+                state.availableVehicles.forEach {
+                    clusterManager.addItem(it?.attributes)
+                    clusterManager.cluster()
+                }
+            } else {
+                toast("No vehicles found. Try again later")
             }
             state.message?.let { toast(it) }
         }
 
-        //get users location
         getUserLocation()
     }
 
@@ -119,17 +118,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         if (hasLocationPermission()) {
             val location = fusedLocationProviderClient.lastLocation
             location.addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val lastKnownLocation = task.result
+                val lastKnownLocation = task.result
+                if (task.isSuccessful && lastKnownLocation != null) {
                     Timber.d("currLoc: ${lastKnownLocation.latitude}, ${lastKnownLocation.longitude}")
-                    showUserLocation(LatLng(lastKnownLocation.latitude, lastKnownLocation.longitude))
+                    showUserLocation(
+                        LatLng(
+                            lastKnownLocation.latitude,
+                            lastKnownLocation.longitude
+                        )
+                    )
                 } else {
                     toast("Could not determine your location")
                     showUserLocation(useDefaultLocation()) // default Berlin Hbf
                 }
             }
         } else {
-            toast("Location permission not granted.")
+            toast("Location permission not granted")
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
@@ -146,7 +150,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             animateCamera(CameraUpdateFactory.zoomTo(16f))
             setOnMapClickListener { setBottomSheetVisibility(false) }
             setOnMarkerClickListener { marker ->
-                showVehicleInfo(viewModel.getVehicleInfo(marker))
+                if (marker.position != userLatLng) {
+                    showVehicleInfo(viewModel.getVehicleInfo(marker))
+                }
                 false
             }
         }
