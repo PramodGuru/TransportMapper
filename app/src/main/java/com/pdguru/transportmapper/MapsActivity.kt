@@ -57,6 +57,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetView)
         setBottomSheetVisibility(false)
+        if (!viewModel.checkInternet()) toast("You are not connected to the internet")
 
         requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -88,8 +89,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     clusterManager.addItem(it?.attributes)
                     clusterManager.cluster()
                 }
-            } else {
-                toast("No vehicles found. Try again later")
             }
             state.message?.let { toast(it) }
         }
@@ -138,6 +137,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    @SuppressLint("PotentialBehaviorOverride")
     private fun showUserLocation(userLatLng: LatLng) {
         gMap.apply {
             addMarker(

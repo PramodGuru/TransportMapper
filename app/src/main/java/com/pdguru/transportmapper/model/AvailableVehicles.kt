@@ -12,17 +12,17 @@ data class AvailableVehicles(
 
 @Parcelize
 data class Vehicle(
-	val attributes: Attributes,
 	val id: String,
-	val type: String
+	val type: String,
+	val attributes: Attributes
 ) : Parcelable
 
 @Parcelize
 data class Attributes(
+	val lat: Double,
 	val lng: Double,
 	val hasHelmetBox: Boolean,
 	val maxSpeed: Int,
-	val lat: Double,
 	val vehicleType: String,
 	val batteryLevel: Int
 ) : Parcelable, ClusterItem {
